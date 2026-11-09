@@ -2408,6 +2408,9 @@ var medalPop_r=medalPop;medalPop=function(a,t){NODING=1;try{medalPop_r(a,t)}fina
 var hatchShow_r=hatchShow;hatchShow=function(i,g){hatchShow_r(i,g);setTimeout(function(){rewardFx("hatch");rays(document.querySelector("#sheet .drhero"))},1320)};
 var bpClaim_r=bpClaim;bpClaim=function(r){bpClaim_r(r);rewardFx("claim")};
 var finishLesson_r=finishLesson;finishLesson=function(L){var x=finishLesson_r(L);try{rewardFx("lesson")}catch(e){}return x};
+/* iPhone: dźwięk aplikacji ma grać także przy przełączniku wyciszenia (Safari 16.4+: Audio Session API) */
+try{if(navigator.audioSession)navigator.audioSession.type="playback"}catch(e){}
+document.addEventListener("pointerdown",function(){try{if(navigator.audioSession&&navigator.audioSession.type!=="playback")navigator.audioSession.type="playback"}catch(e){}},{once:true});
 
 /* ===== boot ===== */
 load();backfill();restoreCkpt();if(!location.hash)ckpt(S.cur,S.pos[S.cur]||0);if(!S.set.rate)S.set.rate=1;missions();initAI();demoInit();loginBonus();if(!S.prof)setTimeout(onboard,450);(function(){var m=location.search.match(/[?&]theme=(\w+)/);if(m)PREV=m[1]})();applyTheme(curTheme());render();if(S.set.eng)setTimeout(function(){engLoad(true)},900);
