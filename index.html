@@ -223,7 +223,7 @@ function bumpMission(kind,v){missions().forEach(function(m){if(m[2]!==kind||m[5]
 /* ===== view state & routing ===== */
 var view={tab:"home",active:false,lessonSec:null};
 function setTab(t){stopAudio();view.tab=t;view.active=false;view.lessonSec=null;render()}
-function renderTop(){var t=$("#top");if(!t)return;var m=minsToday(),g=S.set.goal||30;t.innerHTML='<div class="brand">🇵🇱 Polski Most <i>2.2</i></div><span class="pill" title="Серия">🔥 '+S.streak.n+'</span><span class="pill" title="Опыт">⭐ '+S.xp+'</span><span class="pill" title="Минут сегодня">⏱ '+m+'/'+g+'</span>'}
+function renderTop(){var t=$("#top");if(!t)return;var m=minsToday(),g=S.set.goal||30;t.innerHTML='<div class="brand">🇵🇱 Polski Most <i>2.3</i></div><span class="pill" title="Серия">🔥 '+S.streak.n+'</span><span class="pill" title="Опыт">⭐ '+S.xp+'</span><span class="pill" title="Минут сегодня">⏱ '+m+'/'+g+'</span>'}
 function render(){var a=$("#app");a.innerHTML='<div class="top" id="top"></div><div class="wrap" id="main"></div>';renderTop();
  var tabs=$("#tabs");if(!tabs){tabs=el('<nav class="tabs" id="tabs"><div class="in"></div></nav>');document.body.appendChild(tabs)}
  tabs.style.display=view.active?"none":"flex";
@@ -338,14 +338,31 @@ function tipsFor(t,h){var tips=[];if(/[ąę]/.test(t))tips.push("**носово�
  if(/(sz|cz|rz|ż)/.test(t)&&/(ś|ć|ź|si|ci|zi)/.test(h))tips.push("**твёрдый звук** в «"+t+"»: кончик языка вверх, губы вперёд");
  if(!tips.length)tips.push("«"+t+"» прозвучало как «"+(h||"…")+"». Послушай образец и повтори медленнее; ударение — на предпоследний слог: "+stress(t));return tips}
 function stress(w){var re=/i(?=[aąeęoóuy])|[aąeęioóuy]+/g,m,nuc=[];while((m=re.exec(w))){if(m[0]==="i"&&/[aąeęoóuy]/.test(w[m.index+1]||"")){continue}nuc.push(m)}if(nuc.length<2)return "<b>"+esc(w)+"</b>";var k=nuc[nuc.length-2];return esc(w.slice(0,k.index))+"<b>"+esc(w.slice(k.index,k.index+k[0].length).toUpperCase())+"</b>"+esc(w.slice(k.index+k[0].length))}
-function speak(box,target,done,opt){opt=opt||{};var T=norm(target).split(" "),c=el('<div class="card soft"><div class="small muted">Скажи вслух'+(opt.read?" (прочитай)":"")+'</div><div class="target"></div><div class="row" style="justify-content:center;gap:10px;margin:6px 0"></div><button class="mic">🎙️</button><div class="heard"></div><div class="res"></div><button class="btn sec skip" style="min-height:40px;font-size:14px">Не могу говорить сейчас →</button></div>'),tg=$(".target",c),rw=c.children[2],mic=$(".mic",c),hd=$(".heard",c),rs=$(".res",c),fin=false,att=0;
+function speak(box,target,done,opt){opt=opt||{};var T=norm(target).split(" "),c=el('<div class="card soft"><div class="small muted">Скажи вслух'+(opt.read?" (прочитай)":"")+'</div><div class="target"></div><div class="row" style="justify-content:center;gap:10px;margin:6px 0"></div><button class="mic">🎙️</button><div class="heard"></div><div class="res"></div><button class="btn sec skip" style="min-height:40px;font-size:14px">Не могу говорить сейчас →</button></div>'),tg=$(".target",c),rw=c.children[2],mic=$(".mic",c),hd=$(".heard",c),rs=$(".res",c),fin=false,att=0,coachN=0;
  $(".skip",c).onclick=function(){if(fin)return;fin=true;stopAudio();$(".skip",c).remove();done(0)};
  var words=target.split(" ");tg.innerHTML=words.map(function(w,i){return '<span data-i="'+i+'">'+esc(w)+'</span>'}).join(" ");rw.appendChild(sayBtn(target,{big:true}));var sl=sayBtn(target,{slow:true});sl.textContent="🐢";rw.appendChild(sl);
  function selfCheck(why){if(fin)return;try{mic.remove()}catch(e){}hd.innerHTML=micNote(why);rs.innerHTML="";var r3=el('<div class="row"><button class="btn ok">👍 Сказала вслух</button></div>');r3.children[0].onclick=function(){if(fin)return;fin=true;stopAudio();var sk=$(".skip",c);if(sk)sk.remove();r3.remove();addXP(5);S.stats.speak++;bumpMission("speak",1);done(70)};rs.appendChild(r3)}
+
+ function startCoach(list){mic.style.display="none";hd.textContent="Тренер: разберём слова, которые прозвучали с акцентом 👇";var i=0;
+  var bx=el('<div class="coach" style="margin-top:12px;padding:14px;border-radius:16px;background:#FFF8EC;border:1px solid #F1D7A8"></div>');rs.appendChild(bx);
+  function nextWord(){if(fin)return;if(i>=list.length){bx.innerHTML='<div class="fb ok">💪 Все слова отработаны! Теперь скажи всю фразу ещё раз.</div>';mic.style.display="";hd.textContent="Нажми 🎙️ и скажи всю фразу";sayRu("Отлично. Теперь скажи всю фразу ещё раз.");bx.scrollIntoView({behavior:"smooth",block:"center"});return}
+   var it=list[i],w=it.w,tip=coachTip(w,it.h),tries=0;
+   bx.innerHTML='<div class="small muted">🎯 Тренер · слово '+(i+1)+' из '+list.length+'</div><div class="target" style="margin:6px 0">'+esc(w)+'</div><div class="small muted" style="text-align:center">Ударение: '+stress(w)+'</div><div class="row cbtn" style="justify-content:center;align-items:center;gap:10px;margin:8px 0"></div><div class="fb hint" style="text-align:left">'+tip.html+'</div><button class="mic cmic">🎙️</button><div class="heard cheard"></div><div class="cres"></div>';
+   var row=$(".cbtn",bx),cm=$(".cmic",bx),ch=$(".cheard",bx),cr=$(".cres",bx);
+   var rb=el('<button class="btn sec" style="margin:0;min-height:40px;font-size:14px;width:auto;padding:0 14px">🔁 Объясни ещё раз</button>');rb.onclick=function(){coachSay(w,tip)};var sb=sayBtn(w,{slow:true});sb.textContent="🐢";row.appendChild(sb);row.appendChild(rb);
+   ch.textContent="Послушай, потом нажми 🎙️ и скажи только это слово";
+   listenWord(cm,ch,function(alts){if(fin)return;if(!alts.length){ch.textContent="Ничего не услышала. Нажми 🎙️ и скажи слово ещё раз.";return}
+    ch.textContent="Услышала: «"+alts[0]+"»";
+    if(wordHit(w,alts)){cr.innerHTML='<div class="fb ok">✅ Отлично! Вот так и надо.</div>';cm.disabled=true;addXP(2);sayRu("Отлично!").then(function(){i++;setTimeout(nextWord,300)});return}
+    tries++;cr.innerHTML='<div class="fb bad">Почти. Послушай ещё раз и повтори.'+(tries>=3?' Говори медленно, по слогам, и выдели ударный слог: '+stress(w):'')+'</div>';
+    sayRu(tries>=3?"Давай медленнее, по слогам. Слушай внимательно.":"Почти. Послушай ещё раз.").then(function(){return play(w,{slow:true})})});
+   bx.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(function(){coachSay(w,tip)},350)}
+  nextWord()}
  function paint(H){var res=align(T,H);var k=0;tg.querySelectorAll("span").forEach(function(sp,i){var r=res[i];sp.className=r?(r.s==="ok"?"w-ok":r.s==="diac"?"w-diac":(H.length?"w-bad":"")):""});return res}
  function finish(res,conf){att++;var ok=res.filter(function(r){return r.s==="ok"}).length,di=res.filter(function(r){return r.s==="diac"}).length,sc=Math.round(100*(ok+0.5*di)/T.length);if(conf>0)sc=Math.round(sc*0.85+15*conf);S.stats.speak++;bumpMission("speak",1);
   var bad=res.filter(function(r){return r.s!=="ok"}),tips=[];bad.slice(0,2).forEach(function(r){tips=tips.concat(tipsFor(r.t,r.h))});
   rs.innerHTML='<div class="score">'+sc+'%</div><div class="fb '+(sc>=85?"ok":sc>=60?"hint":"bad")+'">'+(sc>=85?"Звучит понятно и чисто! 👏":sc>=60?"Хорошо, тебя поймут. Чуть поправим:":"Давай ещё раз — медленно и чётко.")+(tips.length?'<br>'+tips.slice(0,2).map(md).join("<br>"):'')+'</div>';
+  var weak=res.filter(needsCoach);if(weak.length&&coachN<2&&!fin){coachN++;var seen={};startCoach(weak.filter(function(x){if(seen[x.t])return false;seen[x.t]=1;return true}).map(function(x){return {w:x.t,h:x.h}}));return}
   if(AI&&sc<95){var ab=el('<button class="btn sec">🤖 Разбор от Оли</button>');ab.onclick=function(){ab.disabled=true;ab.textContent="Ола слушает…";askOla("pron",{target:target,heard:hd.dataset.alts||hd.textContent,score:sc,tips:tips.join(" | ")}).then(function(t){ab.outerHTML='<div class="fb hint">👩‍🏫 '+md(t)+'</div>'}).catch(function(){ab.remove()})};rs.appendChild(ab)}
   if(LS)LS.sp.push(sc);addXP(sc>=85?10:sc>=60?6:3);if(!fin){fin=true;var sk=$(".skip",c);if(sk)sk.remove();nextBtn(c,function(){done(sc)},opt.nextLabel)}}
  if(!MIC_OK){selfCheck();box.appendChild(c);return}
@@ -373,6 +390,48 @@ function speak(box,target,done,opt){opt=opt||{};var T=norm(target).split(" "),c=
   r.onend=function(){if(!closed)fromLive()};
   try{r.start()}catch(e){closed=true;clearT();mic.classList.remove("rec");r=null;MIC_OK=false;selfCheck("🎙️ Не получилось включить микрофон. ")}};
  box.appendChild(c)}
+
+
+/* ===== pronunciation coach (2.3) ===== */
+var ruVoice=null;
+function pickRu(){try{var vs=speechSynthesis.getVoices().filter(function(v){return /^ru/i.test(v.lang)});if(!vs.length)return;
+ function rk(v){var n=v.name.toLowerCase();return (/premium|премиум/.test(n)?6:0)+(/enhanced|улучш|natural|neural/.test(n)?4:0)+(/milena|милена/.test(n)?2:0)+(/google/.test(n)?1:0)}
+ vs.sort(function(p,q){return rk(q)-rk(p)});ruVoice=vs[0]}catch(e){}}
+function wait(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function sayRu(t){return new Promise(function(res){if(!("speechSynthesis" in window))return res();var done=false;function fin(){if(!done){done=true;res()}}
+ try{if(!ruVoice)pickRu();speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.lang="ru-RU";if(ruVoice)u.voice=ruVoice;u.rate=0.98;u.onend=u.onerror=fin;speechSynthesis.speak(u);setTimeout(fin,Math.min(12000,1800+t.length*85))}catch(e){fin()}})}
+var PL_SPECIAL=/[ąćęłńóśźż]/;
+function isNumWord(w){return /^(zero|jed|dw|trz|czter|pię|sześ|sze|sied|osi|dziewi|dziesi|sto|tysi|pół)/.test(w)}
+function needsCoach(r){return r.s!=="ok"&&(r.t.length>=3||PL_SPECIAL.test(r.t))&&!(isNumWord(r.t)&&/^\d+$/.test(r.h||""))}
+function wordHit(w,alts){return alts.some(function(x){var hs=norm(x).split(" ");return hs.indexOf(w)>=0||(isNumWord(w)&&hs.some(function(h){return /^\d+$/.test(h)}))})}
+function coachTip(w,h){h=h||"";var R=[
+ [/ą/,"ą","Это «о» с носовым призвуком: губы округли, а в конце пусти воздух немного в нос, без чёткого «н»."],
+ [/ę/,"ę","В середине слова это «э» с носовым призвуком. В конце слова — почти обычное «э», без носа."],
+ [/ł/,"ł","Губы трубочкой, как для короткого «у», и сразу раскрой их. Язык к верхним зубам не прижимай."],
+ [/(rz|ż)/,"rz / ż","Твёрдый звук: кончик языка подними к нёбу, губы чуть вперёд. Не смягчай его."],
+ [/(sz|cz)/,"sz / cz","Твёрдый звук: кончик языка вверх, губы немного вперёд. Звук твёрже русского, без мягкости."],
+ [/(ś|ć|ź|si|ci|zi|dzi)/,"ś / ć / ź","Мягкий звук: кончик языка за нижние зубы, губы в лёгкой улыбке. Звук тоньше и мягче русского."],
+ [/ń|ni/,"ń","Мягкий звук: середину языка прижми к нёбу и не добавляй гласный после него."],
+ [/y/,"y","Польское «y»: язык ниже и расслабленнее, чем в русском «ы». Звук между «ы» и «э»."],
+ [/ó/,"ó","«ó» звучит как обычное «у», губы округлены."],
+ [/(ch|h)/,"ch / h","Как лёгкое русское «х», без хрипа в горле."]];
+ var pick=null;
+ if(h&&deacc(h)===deacc(w)&&h!==w){for(var i=0;i<R.length&&!pick;i++){var m=w.match(R[i][0]);if(m&&!(new RegExp(m[0])).test(h))pick=R[i]}}
+ if(!pick){for(var j=0;j<R.length&&!pick;j++)if(R[j][0].test(w))pick=R[j]}
+ var stressTxt="Ударение — на предпоследний слог. Скажи медленно и выдели его голосом.";
+ if(!pick)return {html:md("**Ударение.** "+stressTxt),say:stressTxt};
+ return {html:md("**"+pick[1]+".** "+pick[2])+'<br><span class="small muted">'+esc(stressTxt)+'</span>',say:pick[2]}}
+function coachSay(w,tip){stopAudio();return play(w,{slow:true}).then(function(){return wait(250)}).then(function(){return sayRu(tip.say)}).then(function(){return wait(200)}).then(function(){return play(w)})}
+function listenWord(btn,out,cb){var r=null,live="",alts=[],t1=null,t2=null,closed=true;
+ function end(){if(closed)return;closed=true;clearTimeout(t1);clearTimeout(t2);var rr=r;r=null;btn.classList.remove("rec");if(rr){try{rr.abort()}catch(e){}}cb(alts.length?alts:(live?[live]:[]))}
+ btn.onclick=function(){stopAudio();if(r&&!closed){end();return}closed=false;live="";alts=[];r=new SRc();r.lang="pl-PL";r.interimResults=true;r.maxAlternatives=4;r.continuous=false;btn.classList.add("rec");out.textContent="Слушаю… Скажи слово";
+  t2=setTimeout(end,7000);
+  r.onresult=function(e){if(closed)return;var res=e.results[e.results.length-1];live=Array.prototype.map.call(e.results,function(x){return x[0].transcript}).join(" ");out.textContent="«"+live+"»";
+   if(res.isFinal){alts=[];if(e.results.length===1){for(var k=0;k<res.length;k++)alts.push(res[k].transcript)}else alts=[live];end();return}
+   clearTimeout(t1);t1=setTimeout(end,1500)};
+  r.onerror=function(e){if(closed)return;if(live){end();return}closed=true;clearTimeout(t1);clearTimeout(t2);r=null;btn.classList.remove("rec");out.textContent=e.error==="no-speech"?"Ничего не услышала. Нажми 🎙️ и скажи слово.":"Микрофон: "+e.error+". Нажми 🎙️ ещё раз."};
+  r.onend=function(){if(!closed)end()};
+  try{r.start()}catch(e){closed=true;btn.classList.remove("rec");out.textContent="Не получилось включить микрофон. Нажми 🎙️ ещё раз."}}}
 
 /* ===== AI (sample capability) ===== */
 var AI=null;function initAI(){try{if(window.claude&&claude.use)claude.use("sample").then(function(s){AI=s||null}).catch(function(){AI=null})}catch(e){}}
